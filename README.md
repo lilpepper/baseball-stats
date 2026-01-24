@@ -4,10 +4,12 @@ Single-page historic baseball stats UI with sliders, dials, and a lightweight LL
 
 ## Run locally
 
-From the repo root:
+From the repo root (Python 3 recommended):
 
 ```bash
 python -m http.server 8000
 ```
 
 Then open `http://localhost:8000/index.html` in your browser.
+
+If you prefer another static server, any simple HTTP server will work.

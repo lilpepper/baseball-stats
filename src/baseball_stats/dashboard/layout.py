@@ -152,6 +152,11 @@ def _create_main_content():
                         tab_id="compare",
                     ),
                     dbc.Tab(
+                        _create_career_totals_tab(),
+                        label="Career Totals",
+                        tab_id="career-totals",
+                    ),
+                    dbc.Tab(
                         _create_custom_stats_tab(),
                         label="Custom Stats",
                         tab_id="custom-stats",
@@ -332,6 +337,79 @@ def _create_compare_tab():
                         className="mt-3",
                     )
                 ]
+            ),
+        ]
+    )
+
+
+def _create_career_totals_tab():
+    """Create the career totals comparison tab."""
+    return html.Div(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Label("Select Players to Compare (up to 5)"),
+                            dcc.Dropdown(
+                                id="career-player-select",
+                                placeholder="Search and select players...",
+                                searchable=True,
+                                multi=True,
+                                maxHeight=300,
+                            ),
+                        ],
+                        width=12,
+                    ),
+                ],
+                className="mb-4",
+            ),
+            # Career summary cards
+            dbc.Row(
+                id="career-summary-cards",
+                className="mb-4",
+            ),
+            # Career comparison table
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Career Statistics Comparison"),
+                                dbc.CardBody(
+                                    dcc.Loading(
+                                        children=[html.Div(id="career-comparison-table")],
+                                    )
+                                ),
+                            ]
+                        ),
+                        width=12,
+                    ),
+                ],
+                className="mb-4",
+            ),
+            # Career WAR chart
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Career WAR Comparison"),
+                                dbc.CardBody(
+                                    dcc.Loading(
+                                        children=[
+                                            dcc.Graph(
+                                                id="career-war-chart",
+                                                style={"height": "350px"},
+                                            )
+                                        ],
+                                    )
+                                ),
+                            ]
+                        ),
+                        width=12,
+                    ),
+                ],
             ),
         ]
     )

@@ -460,6 +460,171 @@ def register_callbacks(app, db, llm_agent=None):
             logger.error(f"Error generating player card: {e}")
             return html.Div(f"Error: {str(e)}", className="text-danger")
 
+    # Career Totals callbacks
+    @app.callback(
+        Output("career-player-select", "options"),
+        Input("career-player-select", "search_value"),
+        Input("stat-type-toggle", "value"),
+    )
+    def update_career_player_options(search_value, stat_type):
+        """Update career player search dropdown."""
+        if not search_value or len(search_value) < 2:
+            return []
+        try:
+            players = db.search_players(search_value, stat_type)
+            return [{"label": p, "value": p} for p in players]
+        except Exception:
+            return []
+
+    @app.callback(
+        Output("career-summary-cards", "children"),
+        Output("career-comparison-table", "children"),
+        Output("career-war-chart", "figure"),
+        Input("career-player-select", "value"),
+        Input("stat-type-toggle", "value"),
+    )
+    def update_career_comparison(selected_players, stat_type):
+        """Update career totals comparison view."""
+        import dash_bootstrap_components as dbc
+        import plotly.graph_objects as go
+        from baseball_stats.stats.career_stats import (
+            calculate_career_batting_stats,
+            calculate_career_pitching_stats,
+        )
+
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            annotations=[dict(
+                text="Select players to compare career totals",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False, font=dict(size=16)
+            )]
+        )
+
+        if not selected_players:
+            return [], html.Div("Select players above to compare their career statistics", className="text-muted"), empty_fig
+
+        # Limit to 5 players
+        selected_players = selected_players[:5]
+
+        try:
+            # Get data for each player
+            players_data = {}
+            for player in selected_players:
+                if stat_type == "batting":
+                    df = db.get_batting_stats(player_names=[player])
+                else:
+                    df = db.get_pitching_stats(player_names=[player])
+                if not df.empty:
+                    players_data[player] = df
+
+            if not players_data:
+                return [], html.Div("No data found for selected players", className="text-warning"), empty_fig
+
+            # Calculate career stats
+            calc_func = calculate_career_batting_stats if stat_type == "batting" else calculate_career_pitching_stats
+            career_stats = {name: calc_func(df) for name, df in players_data.items()}
+
+            # Build summary cards (one per player with key stats)
+            summary_cards = []
+            for player, stats in career_stats.items():
+                if stat_type == "batting":
+                    card_stats = [
+                        ("WAR", stats.get("war", 0)),
+                        ("AVG", f"{stats.get('avg', 0):.3f}"),
+                        ("HR", stats.get("hr", 0)),
+                        ("RBI", stats.get("rbi", 0)),
+                    ]
+                else:
+                    card_stats = [
+                        ("WAR", stats.get("war", 0)),
+                        ("ERA", f"{stats.get('era', 0):.2f}"),
+                        ("W", stats.get("wins", 0)),
+                        ("K", stats.get("k", 0)),
+                    ]
+
+                card = dbc.Col(
+                    dbc.Card([
+                        dbc.CardHeader(player, className="fw-bold"),
+                        dbc.CardBody([
+                            html.Div([
+                                html.Span(f"{label}: ", className="text-muted"),
+                                html.Span(f"{value}", className="fw-bold"),
+                            ], className="mb-1")
+                            for label, value in card_stats
+                        ]),
+                    ]),
+                    width=12 // min(len(career_stats), 4),
+                    className="mb-2",
+                )
+                summary_cards.append(card)
+
+            # Build comparison table
+            if stat_type == "batting":
+                stat_order = ["seasons", "games", "pa", "ab", "hits", "hr", "rbi", "runs", "sb", "bb", "k", "avg", "obp", "slg", "ops", "war"]
+                stat_labels = {
+                    "seasons": "Seasons", "games": "G", "pa": "PA", "ab": "AB",
+                    "hits": "H", "hr": "HR", "rbi": "RBI", "runs": "R",
+                    "sb": "SB", "bb": "BB", "k": "K", "avg": "AVG",
+                    "obp": "OBP", "slg": "SLG", "ops": "OPS", "war": "WAR"
+                }
+            else:
+                stat_order = ["seasons", "games", "games_started", "wins", "losses", "saves", "ip", "k", "bb", "hr", "era", "whip", "fip", "k_per_9", "war"]
+                stat_labels = {
+                    "seasons": "Seasons", "games": "G", "games_started": "GS",
+                    "wins": "W", "losses": "L", "saves": "SV", "ip": "IP",
+                    "k": "K", "bb": "BB", "hr": "HR", "era": "ERA",
+                    "whip": "WHIP", "fip": "FIP", "k_per_9": "K/9", "war": "WAR"
+                }
+
+            # Build table rows
+            table_rows = []
+            for stat in stat_order:
+                if stat not in stat_labels:
+                    continue
+                row_data = [html.Td(stat_labels[stat], className="fw-bold")]
+                for player in career_stats:
+                    value = career_stats[player].get(stat, "-")
+                    if isinstance(value, float):
+                        value = f"{value:.3f}" if stat in ["avg", "obp", "slg", "ops"] else f"{value:.2f}" if stat in ["era", "whip", "fip"] else f"{value:.1f}"
+                    row_data.append(html.Td(str(value)))
+                table_rows.append(html.Tr(row_data))
+
+            comparison_table = html.Table(
+                [
+                    html.Thead(html.Tr([html.Th("Stat")] + [html.Th(p) for p in career_stats.keys()])),
+                    html.Tbody(table_rows),
+                ],
+                className="table table-striped table-hover",
+            )
+
+            # Build WAR comparison bar chart
+            war_fig = go.Figure()
+            players = list(career_stats.keys())
+            wars = [career_stats[p].get("war", 0) for p in players]
+            war_fig.add_trace(go.Bar(
+                x=players,
+                y=wars,
+                text=[f"{w:.1f}" for w in wars],
+                textposition="auto",
+                marker_color=px.colors.qualitative.Set2[:len(players)],
+            ))
+            war_fig.update_layout(
+                title="Career WAR Comparison",
+                xaxis_title="Player",
+                yaxis_title="Career WAR",
+                showlegend=False,
+                height=350,
+            )
+
+            return summary_cards, comparison_table, war_fig
+
+        except Exception as e:
+            logger.error(f"Error in career comparison: {e}")
+            return [], html.Div(f"Error: {str(e)}", className="text-danger"), empty_fig
+
     @app.callback(
         Output("formula-preview", "children"),
         Input("preview-formula-btn", "n_clicks"),

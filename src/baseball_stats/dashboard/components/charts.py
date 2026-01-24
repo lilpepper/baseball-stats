@@ -59,6 +59,7 @@ def create_scatter_plot(
         size=size_col,
         hover_name=hover_name,
         hover_data=["team", "season", "war"],
+        custom_data=["name"],  # Include player name for click events
         title=title,
         template="plotly_white",
     )

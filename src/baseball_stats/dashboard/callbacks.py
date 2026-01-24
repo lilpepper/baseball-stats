@@ -156,6 +156,26 @@ def register_callbacks(app, db, llm_agent=None):
             return empty_fig, empty_table, "0", "0.0", "0.0", 0
 
     @app.callback(
+        Output("player-card-search", "value", allow_duplicate=True),
+        Output("main-tabs", "active_tab"),
+        Input("main-scatter-plot", "clickData"),
+        prevent_initial_call=True,
+    )
+    def handle_scatter_click(click_data):
+        """Navigate to player card when clicking a point in scatter plot."""
+        if not click_data or not click_data.get("points"):
+            raise PreventUpdate
+
+        # Extract player name from customdata
+        point = click_data["points"][0]
+        player_name = point.get("customdata", [None])[0]
+
+        if not player_name:
+            raise PreventUpdate
+
+        return player_name, "player-card"
+
+    @app.callback(
         Output("compare-player-1", "options"),
         Input("compare-player-1", "search_value"),
         Input("stat-type-toggle", "value"),

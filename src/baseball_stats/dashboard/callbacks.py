@@ -2,6 +2,7 @@
 
 import json
 import logging
+from io import StringIO
 from typing import Optional
 
 import pandas as pd
@@ -122,7 +123,7 @@ def register_callbacks(app, db, llm_agent=None):
             return empty_fig, empty_table, "0", "0.0", "0.0", 0
 
         try:
-            df = pd.read_json(filtered_data, orient="split")
+            df = pd.read_json(StringIO(filtered_data), orient="split")
 
             # Create scatter plot
             fig = create_scatter_plot(
@@ -645,7 +646,7 @@ def register_callbacks(app, db, llm_agent=None):
             return "Load data first to preview formula"
 
         try:
-            df = pd.read_json(data, orient="split")
+            df = pd.read_json(StringIO(data), orient="split")
 
             if mode == "quick-mode":
                 # Weighted combination

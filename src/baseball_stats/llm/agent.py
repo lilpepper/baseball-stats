@@ -4,7 +4,8 @@ import logging
 from typing import Optional
 
 import pandas as pd
-from langchain.agents import AgentType, create_pandas_dataframe_agent
+from langchain.agents import AgentType
+from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_anthropic import ChatAnthropic
 
 logger = logging.getLogger(__name__)

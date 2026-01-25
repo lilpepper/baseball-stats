@@ -93,6 +93,7 @@ class BaseballDatabase:
     def get_batting_stats(
         self,
         player_names: Optional[list[str]] = None,
+        player_ids: Optional[list[str]] = None,
         teams: Optional[list[str]] = None,
         years: Optional[tuple[int, int]] = None,
         min_pa: int = 0,
@@ -101,7 +102,8 @@ class BaseballDatabase:
         Retrieve batting statistics with filters.
 
         Args:
-            player_names: Filter by player names
+            player_names: Filter by player names (legacy, use player_ids for accuracy)
+            player_ids: Filter by IDfg values (preferred - handles duplicate names)
             teams: Filter by team abbreviations
             years: Filter by year range (start, end)
             min_pa: Minimum plate appearances
@@ -112,7 +114,12 @@ class BaseballDatabase:
         conditions = ["1=1"]
         params = []
 
-        if player_names:
+        # Prefer player_ids over player_names for accurate identification
+        if player_ids:
+            placeholders = ", ".join(["?" for _ in player_ids])
+            conditions.append(f"CAST(IDfg AS VARCHAR) IN ({placeholders})")
+            params.extend(player_ids)
+        elif player_names:
             placeholders = ", ".join(["?" for _ in player_names])
             conditions.append(f"name IN ({placeholders})")
             params.extend(player_names)
@@ -138,6 +145,7 @@ class BaseballDatabase:
     def get_pitching_stats(
         self,
         player_names: Optional[list[str]] = None,
+        player_ids: Optional[list[str]] = None,
         teams: Optional[list[str]] = None,
         years: Optional[tuple[int, int]] = None,
         min_ip: float = 0,
@@ -146,7 +154,8 @@ class BaseballDatabase:
         Retrieve pitching statistics with filters.
 
         Args:
-            player_names: Filter by player names
+            player_names: Filter by player names (legacy, use player_ids for accuracy)
+            player_ids: Filter by IDfg values (preferred - handles duplicate names)
             teams: Filter by team abbreviations
             years: Filter by year range (start, end)
             min_ip: Minimum innings pitched
@@ -157,7 +166,12 @@ class BaseballDatabase:
         conditions = ["1=1"]
         params = []
 
-        if player_names:
+        # Prefer player_ids over player_names for accurate identification
+        if player_ids:
+            placeholders = ", ".join(["?" for _ in player_ids])
+            conditions.append(f"CAST(IDfg AS VARCHAR) IN ({placeholders})")
+            params.extend(player_ids)
+        elif player_names:
             placeholders = ", ".join(["?" for _ in player_names])
             conditions.append(f"name IN ({placeholders})")
             params.extend(player_names)
@@ -224,18 +238,42 @@ class BaseballDatabase:
             LIMIT {limit}
         """)
 
-    def search_players(self, search_term: str, table: str = "batting") -> list[str]:
-        """Search for player names matching a term."""
+    def search_players(
+        self, search_term: str, table: str = "batting"
+    ) -> list[dict]:
+        """
+        Search for players matching a term, returning disambiguated results.
+
+        Returns list of dicts with 'label' (display name with years) and 'value' (IDfg).
+        This handles duplicate names like "Frank Thomas" by including career years.
+        """
         try:
+            # Get unique players with their IDfg and career span
             df = self.conn.execute(f"""
-                SELECT DISTINCT name
+                SELECT
+                    IDfg,
+                    name,
+                    MIN(season) as first_year,
+                    MAX(season) as last_year
                 FROM {table}
                 WHERE LOWER(name) LIKE LOWER('%{search_term}%')
-                ORDER BY name
+                GROUP BY IDfg, name
+                ORDER BY name, first_year
                 LIMIT 50
             """).fetchdf()
-            return df["name"].tolist()
-        except Exception:
+
+            results = []
+            for _, row in df.iterrows():
+                # Create display label with career years for disambiguation
+                label = f"{row['name']} ({row['first_year']}-{row['last_year']})"
+                results.append({
+                    "label": label,
+                    "value": str(row["IDfg"]),  # Use IDfg as the unique identifier
+                    "name": row["name"],  # Keep raw name for display
+                })
+            return results
+        except Exception as e:
+            logger.error(f"Error searching players: {e}")
             return []
 
     def save_custom_formula(self, name: str, expression: str, description: str = ""):

@@ -117,7 +117,12 @@ def get_career_percentiles(
     if not agg_funcs:
         return {}
 
-    career_totals = all_players_df.groupby("name").agg(agg_funcs).reset_index()
+    # Use IDfg for grouping to handle duplicate names correctly
+    if "IDfg" in all_players_df.columns:
+        career_totals = all_players_df.groupby("IDfg").agg(agg_funcs).reset_index()
+    else:
+        # Fallback to name if IDfg not available
+        career_totals = all_players_df.groupby("name").agg(agg_funcs).reset_index()
 
     percentiles = {}
     for stat in stats_to_rank:

@@ -63,8 +63,9 @@ def register_callbacks(app, db, llm_agent=None):
         if not search_value or len(search_value) < 2:
             raise PreventUpdate  # Don't clear options when not searching
         try:
+            # search_players now returns list of dicts with label/value
             players = db.search_players(search_value, stat_type)
-            return [{"label": p, "value": p} for p in players]
+            return players  # Already in correct format: [{label, value}, ...]
         except Exception:
             raise PreventUpdate
 
@@ -212,8 +213,9 @@ def register_callbacks(app, db, llm_agent=None):
         if not search_value or len(search_value) < 2:
             raise PreventUpdate
         try:
+            # search_players returns list of dicts with label/value (IDfg)
             players = db.search_players(search_value, stat_type)
-            return [{"label": p, "value": p} for p in players]
+            return players
         except Exception:
             raise PreventUpdate
 
@@ -227,8 +229,9 @@ def register_callbacks(app, db, llm_agent=None):
         if not search_value or len(search_value) < 2:
             raise PreventUpdate
         try:
+            # search_players returns list of dicts with label/value (IDfg)
             players = db.search_players(search_value, stat_type)
-            return [{"label": p, "value": p} for p in players]
+            return players
         except Exception:
             raise PreventUpdate
 
@@ -240,28 +243,33 @@ def register_callbacks(app, db, llm_agent=None):
         Input("compare-player-2", "value"),
         Input("stat-type-toggle", "value"),
     )
-    def update_comparison(player1, player2, stat_type):
+    def update_comparison(player1_id, player2_id, stat_type):
         """Update player comparison view."""
         from .components.charts import create_radar_chart
 
         empty_radar = create_radar_chart({}, stat_type)
 
-        if not player1 or not player2:
+        if not player1_id or not player2_id:
             return {}, empty_radar, html.Div("Select two players to compare")
 
         try:
+            # player1_id and player2_id are now IDfg values
             if stat_type == "batting":
-                df1 = db.get_batting_stats(player_names=[player1])
-                df2 = db.get_batting_stats(player_names=[player2])
+                df1 = db.get_batting_stats(player_ids=[player1_id])
+                df2 = db.get_batting_stats(player_ids=[player2_id])
                 compare_cols = ["war", "avg", "obp", "slg", "hr", "rbi"]
             else:
-                df1 = db.get_pitching_stats(player_names=[player1])
-                df2 = db.get_pitching_stats(player_names=[player2])
+                df1 = db.get_pitching_stats(player_ids=[player1_id])
+                df2 = db.get_pitching_stats(player_ids=[player2_id])
                 compare_cols = ["war", "era", "whip", "k", "wins", "ip"]
 
+            # Get player names from the data for display
+            player1_name = df1["name"].iloc[0] if not df1.empty else f"Player {player1_id}"
+            player2_name = df2["name"].iloc[0] if not df2.empty else f"Player {player2_id}"
+
             # Combine for comparison
-            df1["player"] = player1
-            df2["player"] = player2
+            df1["player"] = player1_name
+            df2["player"] = player2_name
             combined = pd.concat([df1, df2])
 
             # Create comparison line chart by season
@@ -271,7 +279,7 @@ def register_callbacks(app, db, llm_agent=None):
                 y="war",
                 color="player",
                 markers=True,
-                title=f"WAR Comparison: {player1} vs {player2}",
+                title=f"WAR Comparison: {player1_name} vs {player2_name}",
             )
 
             # Create comparison table
@@ -281,7 +289,7 @@ def register_callbacks(app, db, llm_agent=None):
             # Create radar chart with career averages
             if stat_type == "batting":
                 radar_stats = {
-                    player1: {
+                    player1_name: {
                         "war": df1["war"].mean() if "war" in df1.columns else 0,
                         "avg": df1["avg"].mean() if "avg" in df1.columns else 0,
                         "obp": df1["obp"].mean() if "obp" in df1.columns else 0,
@@ -289,7 +297,7 @@ def register_callbacks(app, db, llm_agent=None):
                         "hr": df1["hr"].mean() if "hr" in df1.columns else 0,
                         "sb": df1["sb"].mean() if "sb" in df1.columns else 0,
                     },
-                    player2: {
+                    player2_name: {
                         "war": df2["war"].mean() if "war" in df2.columns else 0,
                         "avg": df2["avg"].mean() if "avg" in df2.columns else 0,
                         "obp": df2["obp"].mean() if "obp" in df2.columns else 0,
@@ -300,7 +308,7 @@ def register_callbacks(app, db, llm_agent=None):
                 }
             else:
                 radar_stats = {
-                    player1: {
+                    player1_name: {
                         "war": df1["war"].mean() if "war" in df1.columns else 0,
                         "era": df1["era"].mean() if "era" in df1.columns else 0,
                         "whip": df1["whip"].mean() if "whip" in df1.columns else 0,
@@ -308,7 +316,7 @@ def register_callbacks(app, db, llm_agent=None):
                         "wins": df1["wins"].mean() if "wins" in df1.columns else 0,
                         "saves": df1["saves"].mean() if "saves" in df1.columns else 0,
                     },
-                    player2: {
+                    player2_name: {
                         "war": df2["war"].mean() if "war" in df2.columns else 0,
                         "era": df2["era"].mean() if "era" in df2.columns else 0,
                         "whip": df2["whip"].mean() if "whip" in df2.columns else 0,
@@ -324,20 +332,20 @@ def register_callbacks(app, db, llm_agent=None):
             for col in compare_cols:
                 table_data.append({
                     "Stat": col.upper(),
-                    player1: stats1.get(col, "N/A"),
-                    player2: stats2.get(col, "N/A"),
+                    player1_name: stats1.get(col, "N/A"),
+                    player2_name: stats2.get(col, "N/A"),
                 })
 
             table = html.Table(
                 [
                     html.Thead(
-                        html.Tr([html.Th("Stat"), html.Th(player1), html.Th(player2)])
+                        html.Tr([html.Th("Stat"), html.Th(player1_name), html.Th(player2_name)])
                     ),
                     html.Tbody([
                         html.Tr([
                             html.Td(row["Stat"]),
-                            html.Td(str(row[player1])),
-                            html.Td(str(row[player2])),
+                            html.Td(str(row[player1_name])),
+                            html.Td(str(row[player2_name])),
                         ])
                         for row in table_data
                     ]),
@@ -362,8 +370,9 @@ def register_callbacks(app, db, llm_agent=None):
             # Don't clear options when search is empty (preserves selection)
             raise PreventUpdate
         try:
+            # search_players returns list of dicts with label/value (IDfg)
             players = db.search_players(search_value, stat_type)
-            return [{"label": p, "value": p} for p in players]
+            return players
         except Exception:
             raise PreventUpdate
 
@@ -372,15 +381,16 @@ def register_callbacks(app, db, llm_agent=None):
         Input("player-card-search", "value"),
         Input("stat-type-toggle", "value"),
     )
-    def update_player_card_seasons(player_name, stat_type):
+    def update_player_card_seasons(player_id, stat_type):
         """Update available seasons for selected player."""
-        if not player_name:
+        if not player_id:
             return []
         try:
+            # Use player_ids for accurate player identification
             if stat_type == "batting":
-                df = db.get_batting_stats(player_names=[player_name])
+                df = db.get_batting_stats(player_ids=[player_id])
             else:
-                df = db.get_pitching_stats(player_names=[player_name])
+                df = db.get_pitching_stats(player_ids=[player_id])
             seasons = sorted(df["season"].unique().tolist(), reverse=True)
             return [{"label": str(s), "value": s} for s in seasons]
         except Exception:
@@ -392,9 +402,9 @@ def register_callbacks(app, db, llm_agent=None):
         Input("player-card-season", "value"),
         Input("stat-type-toggle", "value"),
     )
-    def update_player_card(player_name, season, stat_type):
+    def update_player_card(player_id, season, stat_type):
         """Generate player stat card."""
-        if not player_name:
+        if not player_id:
             return html.Div(
                 "Search for a player to view their stat card",
                 className="text-muted text-center py-5",
@@ -405,9 +415,9 @@ def register_callbacks(app, db, llm_agent=None):
             import plotly.express as px
             from dash import dcc
 
-            # Get player data
+            # Get player data by IDfg
             if stat_type == "batting":
-                df = db.get_batting_stats(player_names=[player_name])
+                df = db.get_batting_stats(player_ids=[player_id])
                 key_stats = ["war", "avg", "obp", "slg", "ops", "hr", "rbi", "runs", "sb", "hits"]
                 stat_labels = {
                     "war": "WAR", "avg": "AVG", "obp": "OBP", "slg": "SLG",
@@ -415,12 +425,15 @@ def register_callbacks(app, db, llm_agent=None):
                     "sb": "SB", "hits": "H"
                 }
             else:
-                df = db.get_pitching_stats(player_names=[player_name])
+                df = db.get_pitching_stats(player_ids=[player_id])
                 key_stats = ["war", "era", "whip", "fip", "wins", "losses", "saves", "k", "ip"]
                 stat_labels = {
                     "war": "WAR", "era": "ERA", "whip": "WHIP", "fip": "FIP",
                     "wins": "W", "losses": "L", "saves": "SV", "k": "K", "ip": "IP"
                 }
+
+            # Get player name from the data
+            player_name = df["name"].iloc[0] if not df.empty else f"Player {player_id}"
 
             if df.empty:
                 return html.Div("No data found for this player", className="text-warning")
@@ -582,9 +595,9 @@ def register_callbacks(app, db, llm_agent=None):
             )
             war_fig.update_layout(height=300)
 
-            # Find similar players
+            # Find similar players using IDfg for accurate identification
             from baseball_stats.stats.similarity import find_similar_players
-            similar_players = find_similar_players(player_name, all_players_df, stat_type, top_n=5)
+            similar_players = find_similar_players(player_id, all_players_df, stat_type, top_n=5)
 
             similar_players_section = dbc.Card([
                 dbc.CardHeader("Similar Players"),
@@ -658,8 +671,9 @@ def register_callbacks(app, db, llm_agent=None):
         if not search_value or len(search_value) < 2:
             raise PreventUpdate
         try:
+            # search_players returns list of dicts with label/value (IDfg)
             players = db.search_players(search_value, stat_type)
-            return [{"label": p, "value": p} for p in players]
+            return players
         except Exception:
             raise PreventUpdate
 
@@ -671,7 +685,7 @@ def register_callbacks(app, db, llm_agent=None):
         Input("career-player-select", "value"),
         Input("stat-type-toggle", "value"),
     )
-    def update_career_comparison(selected_players, stat_type):
+    def update_career_comparison(selected_player_ids, stat_type):
         """Update career totals comparison view."""
         import dash_bootstrap_components as dbc
         import plotly.graph_objects as go
@@ -693,22 +707,24 @@ def register_callbacks(app, db, llm_agent=None):
         )
         empty_radar = create_radar_chart({}, stat_type)
 
-        if not selected_players:
+        if not selected_player_ids:
             return [], html.Div("Select players above to compare their career statistics", className="text-muted"), empty_fig, empty_radar
 
         # Limit to 5 players
-        selected_players = selected_players[:5]
+        selected_player_ids = selected_player_ids[:5]
 
         try:
-            # Get data for each player
+            # Get data for each player using IDfg
             players_data = {}
-            for player in selected_players:
+            for player_id in selected_player_ids:
                 if stat_type == "batting":
-                    df = db.get_batting_stats(player_names=[player])
+                    df = db.get_batting_stats(player_ids=[player_id])
                 else:
-                    df = db.get_pitching_stats(player_names=[player])
+                    df = db.get_pitching_stats(player_ids=[player_id])
                 if not df.empty:
-                    players_data[player] = df
+                    # Use player name as key for display
+                    player_name = df["name"].iloc[0]
+                    players_data[player_name] = df
 
             if not players_data:
                 return [], html.Div("No data found for selected players", className="text-warning"), empty_fig, empty_radar

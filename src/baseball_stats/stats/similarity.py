@@ -66,7 +66,7 @@ def normalize_stats(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 
 def find_similar_players(
-    player_name: str,
+    player_id: str,
     all_players_df: pd.DataFrame,
     stat_type: str = "batting",
     top_n: int = 5,
@@ -76,8 +76,8 @@ def find_similar_players(
     Find players with similar statistical profiles.
 
     Args:
-        player_name: Name of the target player
-        all_players_df: DataFrame with all player stats
+        player_id: IDfg of the target player (handles duplicate names)
+        all_players_df: DataFrame with all player stats (must have IDfg column)
         stat_type: 'batting' or 'pitching'
         top_n: Number of similar players to return
         same_era: If True, only compare players from similar eras
@@ -85,10 +85,16 @@ def find_similar_players(
     Returns:
         List of dicts with similar player info and similarity scores
     """
-    # Get target player's career stats
-    player_df = all_players_df[all_players_df["name"] == player_name]
+    # Ensure IDfg column exists and convert to string for comparison
+    if "IDfg" not in all_players_df.columns:
+        return []
+
+    # Get target player's career stats using IDfg
+    player_df = all_players_df[all_players_df["IDfg"].astype(str) == str(player_id)]
     if player_df.empty:
         return []
+
+    player_name = player_df["name"].iloc[0]
 
     # Define stats to use for similarity
     if stat_type == "batting":
@@ -126,22 +132,22 @@ def find_similar_players(
     player_era_start = min(player_seasons) if player_seasons else 1900
     player_era_end = max(player_seasons) if player_seasons else 2024
 
-    # Calculate career averages for all other players
-    other_players = all_players_df[all_players_df["name"] != player_name]
+    # Calculate career averages for all other players (exclude by IDfg, not name)
+    other_players = all_players_df[all_players_df["IDfg"].astype(str) != str(player_id)]
 
     # Filter by era if requested
     if same_era:
         # Include players whose careers overlap or are within 20 years
         era_range = 20
-        other_players = other_players.groupby("name").filter(
+        other_players = other_players.groupby("IDfg").filter(
             lambda x: (x["season"].min() <= player_era_end + era_range) and
                       (x["season"].max() >= player_era_start - era_range)
         )
 
-    # Aggregate other players' careers
-    career_stats = other_players.groupby("name").agg({
-        stat: "mean" for stat in stats_to_compare if stat in other_players.columns
-    }).reset_index()
+    # Aggregate other players' careers by IDfg (handles duplicate names correctly)
+    agg_dict = {stat: "mean" for stat in stats_to_compare if stat in other_players.columns}
+    agg_dict["name"] = "first"  # Keep player name for display
+    career_stats = other_players.groupby("IDfg").agg(agg_dict).reset_index()
 
     if career_stats.empty:
         return []
@@ -149,18 +155,18 @@ def find_similar_players(
     # Normalize all stats including player's
     all_career_stats = pd.concat([
         career_stats,
-        pd.DataFrame([{"name": player_name, **player_career}])
+        pd.DataFrame([{"IDfg": player_id, "name": player_name, **player_career}])
     ], ignore_index=True)
 
     normalized_df = normalize_stats(all_career_stats, stats_to_compare)
 
     # Get normalized player stats
-    player_norm = normalized_df[normalized_df["name"] == player_name].iloc[0].to_dict()
+    player_norm = normalized_df[normalized_df["IDfg"].astype(str) == str(player_id)].iloc[0].to_dict()
     player_norm_stats = {f"{s}_norm": player_norm.get(f"{s}_norm", 0.5) for s in stats_to_compare}
 
     # Calculate similarity for each other player
     similarities = []
-    for _, row in normalized_df[normalized_df["name"] != player_name].iterrows():
+    for _, row in normalized_df[normalized_df["IDfg"].astype(str) != str(player_id)].iterrows():
         other_norm_stats = {f"{s}_norm": row.get(f"{s}_norm", 0.5) for s in stats_to_compare}
         score = calculate_similarity_score(
             {k: player_norm_stats.get(k, 0.5) for k in [f"{s}_norm" for s in stats_to_compare]},
@@ -169,7 +175,7 @@ def find_similar_players(
         )
 
         # Get original stats for display
-        original_stats = career_stats[career_stats["name"] == row["name"]]
+        original_stats = career_stats[career_stats["IDfg"].astype(str) == str(row["IDfg"])]
         if not original_stats.empty:
             orig = original_stats.iloc[0].to_dict()
             similarities.append({

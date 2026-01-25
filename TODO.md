@@ -38,35 +38,47 @@
 - [ ] **Create visualization suggestions**: LLM suggests charts based on questions
 - [ ] **Add natural language formula creation**: "Create a stat that values power and speed equally"
 
-## Priority 6: Data Expansion
+## Priority 6: Team & Season Analytics (New!)
+
+Shift from individual players to team-level insights:
+
+- [ ] **Team Season Dashboard**: Comprehensive single-team view showing W-L record, run differential, Pythagorean expected wins, team batting/pitching splits, and league rankings. Includes a "report card" grading offense, defense, rotation, and bullpen. *The foundation for all team analytics.*
+
+- [ ] **Team WAR Allocation Map**: Visualize where a team's total WAR comes from—a treemap or stacked bar showing contribution by position (C, 1B, 2B...), role (starters vs. bench, rotation vs. bullpen), and individual players. Instantly reveals roster construction philosophy and where holes exist. *Answers "why did this team win/lose?"*
+
+- [ ] **Cross-Era Team Comparison**: Compare any teams across history with era-adjusted stats. "2001 Mariners vs. 1998 Yankees vs. 1975 Reds"—normalize for run environments, show adjusted run differentials, and project head-to-head matchups. *Finally settle bar arguments with data.*
+
+- [ ] **Franchise Timeline Explorer**: Interactive timeline of a franchise's entire history—season-by-season W-L, playoff appearances, championships, key player acquisitions/departures, and "dynasty" detection. Zoom from 100+ years to a single season. Click any year to drill into that team's roster. *Tells the story of a franchise through data.*
+
+## Priority 7: Data Expansion
 - [ ] **Add Statcast data**: Pitch-level metrics (exit velocity, launch angle, spin rate)
 - [ ] **Include fielding stats**: UZR, DRS, OAA for defensive analysis
-- [ ] **Add team-level data**: Team standings, payroll, park factors
+- [x] **Add team-level data**: Team standings, payroll, park factors *(Required for Priority 6)*
 - [ ] **Include minor league data**: Prospect stats and development tracking
 - [ ] **Add historical All-Star/MVP data**: Award voting and selections
 
-## Priority 7: Performance & Polish
+## Priority 8: Performance & Polish
 - [ ] **Implement lazy loading**: Load data on demand for large datasets
 - [ ] **Add pagination**: Virtual scrolling for large tables
 - [ ] **Optimize DuckDB queries**: Add indexes and query plans
 - [ ] **Add loading skeletons**: Better UX during data fetches
 - [ ] **Implement error boundaries**: Graceful error handling throughout
 
-## Priority 8: Testing & Documentation
+## Priority 9: Testing & Documentation
 - [ ] **Add unit tests**: Test data ingestion, formula validation, callbacks
 - [ ] **Add integration tests**: Test full app workflows
 - [ ] **Create API documentation**: Document all modules and functions
 - [ ] **Add user guide**: How to use each feature
 - [ ] **Create demo video**: Showcase all features
 
-## Priority 9: Deployment & DevOps
+## Priority 10: Deployment & DevOps
 - [ ] **Create Dockerfile**: Containerize the application
 - [ ] **Add docker-compose**: Full stack with Redis cache
 - [ ] **Set up CI/CD**: Automated testing and deployment
 - [ ] **Add health checks**: Monitoring endpoints
 - [ ] **Configure logging**: Structured logging with log rotation
 
-## Priority 10: Counter-Intuitive Insights (New!)
+## Priority 11: Counter-Intuitive Insights
 
 These features reveal hidden truths that contradict conventional baseball wisdom:
 
@@ -78,7 +90,7 @@ These features reveal hidden truths that contradict conventional baseball wisdom
 
 - [ ] **Stat Contradiction Finder**: Automatically detect players whose stats defy conventional wisdom—high OBP but low runs scored (batting in wrong lineup spot?), high strikeouts but elite results (new swing philosophy?), great ERA but terrible FIP (lucky or good defense?). Surface the anomalies that suggest either hidden value or impending regression. *Counter-intuitive because we assume stats tell a coherent story, but contradictions reveal the real insights.*
 
-## Priority 11: Future Features (Wishlist)
+## Priority 12: Future Features (Wishlist)
 - [x] **Player similarity search**: "Find players similar to Mike Trout" ✅ Added to Player Card
 - [ ] **Projection system**: Simple projection model for future performance
 - [ ] **Trade analyzer**: Compare packages of players

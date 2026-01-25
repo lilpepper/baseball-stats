@@ -184,12 +184,12 @@ def register_callbacks(app, db, llm_agent=None):
     def update_compare_player1_options(search_value, stat_type):
         """Update comparison player 1 dropdown based on search."""
         if not search_value or len(search_value) < 2:
-            return []
+            raise PreventUpdate
         try:
             players = db.search_players(search_value, stat_type)
             return [{"label": p, "value": p} for p in players]
         except Exception:
-            return []
+            raise PreventUpdate
 
     @app.callback(
         Output("compare-player-2", "options"),
@@ -199,12 +199,12 @@ def register_callbacks(app, db, llm_agent=None):
     def update_compare_player2_options(search_value, stat_type):
         """Update comparison player 2 dropdown based on search."""
         if not search_value or len(search_value) < 2:
-            return []
+            raise PreventUpdate
         try:
             players = db.search_players(search_value, stat_type)
             return [{"label": p, "value": p} for p in players]
         except Exception:
-            return []
+            raise PreventUpdate
 
     @app.callback(
         Output("comparison-chart", "figure"),
@@ -333,12 +333,13 @@ def register_callbacks(app, db, llm_agent=None):
     def update_player_card_search(search_value, stat_type):
         """Update player card search dropdown."""
         if not search_value or len(search_value) < 2:
-            return []
+            # Don't clear options when search is empty (preserves selection)
+            raise PreventUpdate
         try:
             players = db.search_players(search_value, stat_type)
             return [{"label": p, "value": p} for p in players]
         except Exception:
-            return []
+            raise PreventUpdate
 
     @app.callback(
         Output("player-card-season", "options"),
@@ -517,12 +518,12 @@ def register_callbacks(app, db, llm_agent=None):
     def update_career_player_options(search_value, stat_type):
         """Update career player search dropdown."""
         if not search_value or len(search_value) < 2:
-            return []
+            raise PreventUpdate
         try:
             players = db.search_players(search_value, stat_type)
             return [{"label": p, "value": p} for p in players]
         except Exception:
-            return []
+            raise PreventUpdate
 
     @app.callback(
         Output("career-summary-cards", "children"),

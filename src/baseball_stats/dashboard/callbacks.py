@@ -72,9 +72,9 @@ def register_callbacks(app, db, llm_agent=None):
         Output("view-player-card-btn", "disabled"),
         Input("player-search", "value"),
     )
-    def toggle_view_card_button(selected_player):
+    def toggle_view_card_button(selected_players):
         """Enable/disable View Player Card button based on selection."""
-        return not bool(selected_player)
+        return not bool(selected_players)
 
     @app.callback(
         Output("player-card-search", "value", allow_duplicate=True),
@@ -83,11 +83,13 @@ def register_callbacks(app, db, llm_agent=None):
         State("player-search", "value"),
         prevent_initial_call=True,
     )
-    def navigate_to_player_card(n_clicks, selected_player):
+    def navigate_to_player_card(n_clicks, selected_players):
         """Navigate to Player Card tab when button is clicked."""
-        if not n_clicks or not selected_player:
+        if not n_clicks or not selected_players:
             raise PreventUpdate
-        return selected_player, "player-card"
+        # Use the first selected player for the Player Card
+        first_player = selected_players[0] if isinstance(selected_players, list) else selected_players
+        return first_player, "player-card"
 
     @app.callback(
         Output("filtered-data-store", "data"),
@@ -134,7 +136,7 @@ def register_callbacks(app, db, llm_agent=None):
         Input("y-stat-dropdown", "value"),
         Input("player-search", "value"),
     )
-    def update_main_view(filtered_data, x_stat, y_stat, selected_player):
+    def update_main_view(filtered_data, x_stat, y_stat, selected_players):
         """Update main visualization based on filtered data."""
         if not filtered_data:
             empty_fig = create_scatter_plot(None, x_stat, y_stat)
@@ -144,14 +146,18 @@ def register_callbacks(app, db, llm_agent=None):
         try:
             df = pd.read_json(StringIO(filtered_data), orient="split")
 
-            # Create scatter plot with highlighted player
+            # Normalize selected_players to a list
+            if selected_players and not isinstance(selected_players, list):
+                selected_players = [selected_players]
+
+            # Create scatter plot with highlighted players
             fig = create_scatter_plot(
                 df,
                 x_col=x_stat,
                 y_col=y_stat,
                 hover_name="name",
                 title=f"{y_stat.upper()} vs {x_stat.upper()}",
-                highlighted_player=selected_player,
+                highlighted_players=selected_players,
             )
 
             # Create table

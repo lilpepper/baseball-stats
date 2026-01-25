@@ -79,15 +79,16 @@ def create_player_search():
     """
     return dbc.Card(
         [
-            dbc.CardHeader("Search Player"),
+            dbc.CardHeader("Highlight Players"),
             dbc.CardBody(
                 [
                     dcc.Dropdown(
                         id="player-search",
                         options=[],  # Populated dynamically via callback
-                        placeholder="Type player name...",
+                        placeholder="Type to add players...",
                         searchable=True,
                         clearable=True,
+                        multi=True,  # Enable multi-select with tags
                         className="mb-2",
                     ),
                     dbc.Button(

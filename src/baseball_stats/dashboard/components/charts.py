@@ -15,7 +15,7 @@ def create_scatter_plot(
     size_col: str = None,
     hover_name: str = "name",
     title: str = "Player Statistics",
-    highlighted_player: str = None,
+    highlighted_players: list = None,
 ):
     """
     Create an interactive scatter plot.
@@ -28,7 +28,7 @@ def create_scatter_plot(
         size_col: Column for size encoding
         hover_name: Column for hover labels
         title: Chart title
-        highlighted_player: Name of player to highlight on the chart
+        highlighted_players: List of player names to highlight on the chart
 
     Returns:
         Plotly figure
@@ -52,13 +52,36 @@ def create_scatter_plot(
         )
         return fig
 
-    # If a player is highlighted, add a column for coloring
-    if highlighted_player and "name" in data.columns:
+    # Colors for highlighted players
+    highlight_colors = [
+        "#e74c3c",  # Red
+        "#2ecc71",  # Green
+        "#9b59b6",  # Purple
+        "#f39c12",  # Orange
+        "#1abc9c",  # Teal
+        "#e91e63",  # Pink
+        "#00bcd4",  # Cyan
+        "#ff5722",  # Deep Orange
+    ]
+
+    # If players are highlighted, add a column for coloring
+    if highlighted_players and "name" in data.columns:
         data = data.copy()
-        data["_highlight"] = data["name"].apply(
-            lambda x: highlighted_player if x == highlighted_player else "Other Players"
-        )
+
+        def get_highlight_group(name):
+            if name in highlighted_players:
+                return name
+            return "Other Players"
+
+        data["_highlight"] = data["name"].apply(get_highlight_group)
         color_col = "_highlight"
+
+        # Build color map
+        color_map = {"Other Players": "#a0aec0"}  # Gray for others
+        for i, player in enumerate(highlighted_players):
+            color_map[player] = highlight_colors[i % len(highlight_colors)]
+    else:
+        color_map = None
 
     # Build scatter plot
     fig = px.scatter(
@@ -72,10 +95,7 @@ def create_scatter_plot(
         custom_data=["name"],  # Include player name for click events
         title=title,
         template="plotly_white",
-        color_discrete_map={
-            highlighted_player: "#e74c3c",  # Red for highlighted player
-            "Other Players": "#3498db",  # Blue for others
-        } if highlighted_player else None,
+        color_discrete_map=color_map,
     )
 
     # Update layout for better appearance
@@ -84,16 +104,16 @@ def create_scatter_plot(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
-    # If player is highlighted, make their points larger and more visible
-    if highlighted_player:
+    # If players are highlighted, make their points larger and more visible
+    if highlighted_players:
         for trace in fig.data:
-            if trace.name == highlighted_player:
+            if trace.name in highlighted_players:
                 trace.marker.size = 15
                 trace.marker.opacity = 1.0
                 trace.marker.line = dict(width=2, color="black")
             else:
-                trace.marker.opacity = 0.4
-                trace.marker.size = 8
+                trace.marker.opacity = 0.3
+                trace.marker.size = 6
     else:
         fig.update_traces(marker=dict(opacity=0.7, line=dict(width=1, color="DarkSlateGrey")))
 

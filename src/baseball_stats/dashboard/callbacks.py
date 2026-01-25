@@ -61,12 +61,12 @@ def register_callbacks(app, db, llm_agent=None):
     def update_player_options(search_value, stat_type):
         """Update player search dropdown based on search term."""
         if not search_value or len(search_value) < 2:
-            return []
+            raise PreventUpdate  # Don't clear options when not searching
         try:
             players = db.search_players(search_value, stat_type)
             return [{"label": p, "value": p} for p in players]
         except Exception:
-            return []
+            raise PreventUpdate
 
     @app.callback(
         Output("view-player-card-btn", "disabled"),

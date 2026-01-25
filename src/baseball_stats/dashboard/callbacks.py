@@ -411,31 +411,49 @@ def register_callbacks(app, db, llm_agent=None):
             career_seasons = f"{df['season'].min()} - {df['season'].max()}"
             teams = ", ".join(df["team"].unique())
 
+            # Get all players data for percentile calculations
+            from baseball_stats.stats.percentiles import (
+                get_season_percentiles,
+                get_career_percentiles,
+                get_percentile_color,
+                get_percentile_label,
+            )
+
+            if stat_type == "batting":
+                all_players_df = db.get_batting_stats()
+            else:
+                all_players_df = db.get_pitching_stats()
+
             # Calculate career totals/averages
             if stat_type == "batting":
                 career_war = df["war"].sum()
                 career_avg = df["avg"].mean()
                 career_hr = int(df["hr"].sum())
                 career_rbi = int(df["rbi"].sum())
+                career_stats_dict = {"war": career_war, "hr": career_hr, "rbi": career_rbi}
                 highlight_stats = [
-                    ("Career WAR", f"{career_war:.1f}"),
-                    ("Career AVG", f"{career_avg:.3f}"),
-                    ("Career HR", f"{career_hr:,}"),
-                    ("Career RBI", f"{career_rbi:,}"),
+                    ("Career WAR", f"{career_war:.1f}", "war"),
+                    ("Career AVG", f"{career_avg:.3f}", None),
+                    ("Career HR", f"{career_hr:,}", "hr"),
+                    ("Career RBI", f"{career_rbi:,}", "rbi"),
                 ]
             else:
                 career_war = df["war"].sum()
                 career_era = df["era"].mean()
                 career_wins = int(df["wins"].sum())
                 career_k = int(df["k"].sum())
+                career_stats_dict = {"war": career_war, "wins": career_wins, "k": career_k}
                 highlight_stats = [
-                    ("Career WAR", f"{career_war:.1f}"),
-                    ("Career ERA", f"{career_era:.2f}"),
-                    ("Career W", f"{career_wins:,}"),
-                    ("Career K", f"{career_k:,}"),
+                    ("Career WAR", f"{career_war:.1f}", "war"),
+                    ("Career ERA", f"{career_era:.2f}", None),
+                    ("Career W", f"{career_wins:,}", "wins"),
+                    ("Career K", f"{career_k:,}", "k"),
                 ]
 
-            # Build stat cards for highlights
+            # Calculate career percentiles
+            career_percentiles = get_career_percentiles(career_stats_dict, all_players_df, stat_type)
+
+            # Build stat cards for highlights with percentile badges
             highlight_cards = dbc.Row(
                 [
                     dbc.Col(
@@ -443,15 +461,71 @@ def register_callbacks(app, db, llm_agent=None):
                             dbc.CardBody([
                                 html.H6(label, className="text-muted mb-1"),
                                 html.H3(value, className="mb-0"),
+                                html.Small(
+                                    f"{career_percentiles.get(stat_key, 0)}th %ile",
+                                    className="badge",
+                                    style={
+                                        "backgroundColor": get_percentile_color(career_percentiles.get(stat_key, 0)),
+                                        "color": "white",
+                                    }
+                                ) if stat_key and stat_key in career_percentiles else None,
                             ]),
                             className="text-center",
                         ),
                         width=3,
                     )
-                    for label, value in highlight_stats
+                    for label, value, stat_key in highlight_stats
                 ],
                 className="mb-4",
             )
+
+            # Calculate percentiles for best season
+            best_season_row = df.loc[df["war"].idxmax()]
+            best_season_stats = best_season_row.to_dict()
+            best_season_year = int(best_season_row["season"])
+            best_season_percentiles = get_season_percentiles(
+                best_season_stats, all_players_df, best_season_year, stat_type
+            )
+
+            # Build percentile ranking section
+            if stat_type == "batting":
+                pct_stats = [("WAR", "war"), ("AVG", "avg"), ("OBP", "obp"), ("SLG", "slg"), ("HR", "hr"), ("wRC+", "wrc_plus")]
+            else:
+                pct_stats = [("WAR", "war"), ("ERA", "era"), ("WHIP", "whip"), ("K", "k"), ("K/9", "k_per_9"), ("Wins", "wins")]
+
+            percentile_bars = []
+            for label, stat in pct_stats:
+                pct = best_season_percentiles.get(stat, 0)
+                percentile_bars.append(
+                    html.Div([
+                        html.Div([
+                            html.Span(label, className="me-2", style={"width": "60px", "display": "inline-block"}),
+                            html.Div(
+                                html.Div(
+                                    style={
+                                        "width": f"{pct}%",
+                                        "height": "100%",
+                                        "backgroundColor": get_percentile_color(pct),
+                                        "borderRadius": "4px",
+                                    }
+                                ),
+                                style={
+                                    "flex": "1",
+                                    "height": "20px",
+                                    "backgroundColor": "#e9ecef",
+                                    "borderRadius": "4px",
+                                    "marginRight": "8px",
+                                }
+                            ),
+                            html.Span(f"{pct}%", style={"width": "40px", "textAlign": "right"}),
+                        ], style={"display": "flex", "alignItems": "center"}),
+                    ], className="mb-2")
+                )
+
+            percentile_section = dbc.Card([
+                dbc.CardHeader(f"Percentile Rankings (Best Season: {best_season_year})"),
+                dbc.CardBody(percentile_bars),
+            ], className="mb-4")
 
             # Season-by-season table
             display_cols = ["season", "team"] + [c for c in key_stats if c in df.columns]
@@ -482,6 +556,39 @@ def register_callbacks(app, db, llm_agent=None):
             )
             war_fig.update_layout(height=300)
 
+            # Find similar players
+            from baseball_stats.stats.similarity import find_similar_players
+            similar_players = find_similar_players(player_name, all_players_df, stat_type, top_n=5)
+
+            similar_players_section = dbc.Card([
+                dbc.CardHeader("Similar Players"),
+                dbc.CardBody([
+                    html.Table([
+                        html.Thead(html.Tr([
+                            html.Th("Player"),
+                            html.Th("Similarity"),
+                            html.Th("WAR/yr"),
+                            html.Th("AVG" if stat_type == "batting" else "ERA"),
+                        ])),
+                        html.Tbody([
+                            html.Tr([
+                                html.Td(p["name"]),
+                                html.Td(
+                                    html.Span(
+                                        f"{p['similarity']:.0f}%",
+                                        className="badge",
+                                        style={"backgroundColor": get_percentile_color(p['similarity']), "color": "white"}
+                                    )
+                                ),
+                                html.Td(f"{p['war']:.1f}"),
+                                html.Td(f"{p['avg']:.3f}" if stat_type == "batting" else f"{p['era']:.2f}"),
+                            ])
+                            for p in similar_players
+                        ]) if similar_players else html.Tbody([html.Tr([html.Td("No similar players found", colSpan=4)])])
+                    ], className="table table-sm"),
+                ]),
+            ], className="mb-4")
+
             return html.Div([
                 # Player header
                 dbc.Card(
@@ -491,8 +598,13 @@ def register_callbacks(app, db, llm_agent=None):
                     ]),
                     className="mb-4",
                 ),
-                # Highlight stats
+                # Highlight stats with percentile badges
                 highlight_cards,
+                # Two column layout for percentiles and similar players
+                dbc.Row([
+                    dbc.Col(percentile_section, width=6),
+                    dbc.Col(similar_players_section, width=6),
+                ], className="mb-4"),
                 # WAR chart
                 dbc.Card([
                     dbc.CardBody([

@@ -1,8 +1,8 @@
 # Baseball Stats App - Prioritized TODO
 
 ## Bugs / Warnings to Fix
-- [ ] **LLM agent import error**: Update import from `langchain.agents.create_pandas_dataframe_agent` to `langchain_experimental.agents.create_pandas_dataframe_agent`
-- [ ] **FutureWarning in callbacks.py:125**: Wrap literal JSON string in `StringIO` when calling `pd.read_json()`
+- [x] **LLM agent import error**: Update import from `langchain.agents.create_pandas_dataframe_agent` to `langchain_experimental.agents.create_pandas_dataframe_agent` ✅ Fixed
+- [x] **FutureWarning in callbacks.py:125**: Wrap literal JSON string in `StringIO` when calling `pd.read_json()` ✅ Fixed
 
 ## Priority 1: Essential Setup
 - [ ] **Install dependencies**: Run `pip install -e .` or `pip install -e ".[dev]"`
@@ -12,17 +12,17 @@
 
 ## Priority 2: Core Features to Complete
 - [ ] **Add position filtering**: Currently position data needs to be mapped from pybaseball
-- [ ] **Implement player detail page**: Click on player in scatter plot to see full profile
-- [ ] **Add career totals view**: Aggregate stats across seasons for career comparison
+- [x] **Implement player detail page**: Click on player in scatter plot to see full profile ✅ Player Card tab with click-to-navigate
+- [x] **Add career totals view**: Aggregate stats across seasons for career comparison ✅ Career Totals tab
 - [ ] **Implement data caching**: Add Redis or file-based cache for faster queries
 - [ ] **Add dark mode toggle**: Theme switching for the dashboard
 
 ## Priority 3: Enhanced Visualizations
-- [ ] **Add radar/spider charts**: For multi-stat player comparisons
+- [x] **Add radar/spider charts**: For multi-stat player comparisons ✅ Added to Compare and Career Totals
 - [ ] **Implement heatmaps**: Correlation matrices between stats
 - [ ] **Add histogram distributions**: See how stats are distributed across players
 - [ ] **Create trend sparklines**: Small inline charts showing stat trends
-- [ ] **Add percentile rankings**: Show where a player ranks for each stat
+- [x] **Add percentile rankings**: Show where a player ranks for each stat ✅ Player Card shows percentile bars
 
 ## Priority 4: Advanced Custom Stats
 - [ ] **Save formulas to database**: Persist user formulas across sessions
@@ -66,8 +66,20 @@
 - [ ] **Add health checks**: Monitoring endpoints
 - [ ] **Configure logging**: Structured logging with log rotation
 
-## Priority 10: Future Features (Wishlist)
-- [ ] **Player similarity search**: "Find players similar to Mike Trout"
+## Priority 10: Counter-Intuitive Insights (New!)
+
+These features reveal hidden truths that contradict conventional baseball wisdom:
+
+- [ ] **Era Time Machine**: Project how a player's stats would translate to a different era. "What would Babe Ruth hit in 2024?" or "How would Mike Trout fare in 1968?" Adjusts for run environment, pitching quality, and ballpark factors. *Counter-intuitive because we treat stats as absolute, but context changes everything.*
+
+- [ ] **Career Trajectory Clustering**: Group players not by position or peak stats, but by the *shape* of their career arc—late bloomers, early peaks, steady performers, comeback stories, flash-in-the-pans. Find which pattern a current player is following. *Counter-intuitive because we obsess over peak performance while ignoring that career shapes predict future value.*
+
+- [ ] **The "Replacement Reality" View**: For any player-season, show a side-by-side of what actually happened vs. what a freely-available replacement-level player would have contributed. Makes WAR tangible: "Without Mike Trout, the Angels would have scored 847 runs instead of 912." *Counter-intuitive because WAR is abstract; this makes the counterfactual concrete and emotionally resonant.*
+
+- [ ] **Stat Contradiction Finder**: Automatically detect players whose stats defy conventional wisdom—high OBP but low runs scored (batting in wrong lineup spot?), high strikeouts but elite results (new swing philosophy?), great ERA but terrible FIP (lucky or good defense?). Surface the anomalies that suggest either hidden value or impending regression. *Counter-intuitive because we assume stats tell a coherent story, but contradictions reveal the real insights.*
+
+## Priority 11: Future Features (Wishlist)
+- [x] **Player similarity search**: "Find players similar to Mike Trout" ✅ Added to Player Card
 - [ ] **Projection system**: Simple projection model for future performance
 - [ ] **Trade analyzer**: Compare packages of players
 - [ ] **Draft board**: Rank players by custom criteria

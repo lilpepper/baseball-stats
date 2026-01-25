@@ -52,16 +52,16 @@ def create_scatter_plot(
         )
         return fig
 
-    # Colors for highlighted players
+    # Bright, saturated colors for highlighted players (high contrast)
     highlight_colors = [
-        "#e74c3c",  # Red
-        "#2ecc71",  # Green
-        "#9b59b6",  # Purple
-        "#f39c12",  # Orange
-        "#1abc9c",  # Teal
-        "#e91e63",  # Pink
-        "#00bcd4",  # Cyan
-        "#ff5722",  # Deep Orange
+        "#FF0000",  # Bright Red
+        "#00FF00",  # Bright Green
+        "#FF00FF",  # Magenta
+        "#FFD700",  # Gold
+        "#00FFFF",  # Cyan
+        "#FF6B00",  # Bright Orange
+        "#0080FF",  # Bright Blue
+        "#FF1493",  # Deep Pink
     ]
 
     # If players are highlighted, add a column for coloring
@@ -76,8 +76,8 @@ def create_scatter_plot(
         data["_highlight"] = data["name"].apply(get_highlight_group)
         color_col = "_highlight"
 
-        # Build color map
-        color_map = {"Other Players": "#a0aec0"}  # Gray for others
+        # Build color map - very faded gray for non-highlighted
+        color_map = {"Other Players": "#d0d0d0"}  # Light gray for others
         for i, player in enumerate(highlighted_players):
             color_map[player] = highlight_colors[i % len(highlight_colors)]
     else:
@@ -104,16 +104,18 @@ def create_scatter_plot(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
-    # If players are highlighted, make their points larger and more visible
+    # If players are highlighted, make their points much larger and more visible
     if highlighted_players:
         for trace in fig.data:
             if trace.name in highlighted_players:
-                trace.marker.size = 15
+                trace.marker.size = 22  # Much bigger
                 trace.marker.opacity = 1.0
-                trace.marker.line = dict(width=2, color="black")
+                trace.marker.line = dict(width=3, color="black")  # Thicker outline
+                trace.marker.symbol = "circle"
             else:
-                trace.marker.opacity = 0.3
-                trace.marker.size = 6
+                trace.marker.opacity = 0.15  # Very faded
+                trace.marker.size = 5  # Smaller
+                trace.marker.line = dict(width=0)  # No outline
     else:
         fig.update_traces(marker=dict(opacity=0.7, line=dict(width=1, color="DarkSlateGrey")))
 

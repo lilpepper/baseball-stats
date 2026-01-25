@@ -323,11 +323,23 @@ def _create_compare_tab():
                             children=[
                                 dcc.Graph(
                                     id="comparison-chart",
-                                    style={"height": "400px"},
+                                    style={"height": "350px"},
                                 )
                             ],
                         ),
-                    )
+                        width=6,
+                    ),
+                    dbc.Col(
+                        dcc.Loading(
+                            children=[
+                                dcc.Graph(
+                                    id="comparison-radar-chart",
+                                    style={"height": "350px"},
+                                )
+                            ],
+                        ),
+                        width=6,
+                    ),
                 ]
             ),
             dbc.Row(
@@ -388,7 +400,7 @@ def _create_career_totals_tab():
                 ],
                 className="mb-4",
             ),
-            # Career WAR chart
+            # Career WAR chart and Radar chart
             dbc.Row(
                 [
                     dbc.Col(
@@ -407,7 +419,25 @@ def _create_career_totals_tab():
                                 ),
                             ]
                         ),
-                        width=12,
+                        width=6,
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Career Stats Radar"),
+                                dbc.CardBody(
+                                    dcc.Loading(
+                                        children=[
+                                            dcc.Graph(
+                                                id="career-radar-chart",
+                                                style={"height": "350px"},
+                                            )
+                                        ],
+                                    )
+                                ),
+                            ]
+                        ),
+                        width=6,
                     ),
                 ],
             ),

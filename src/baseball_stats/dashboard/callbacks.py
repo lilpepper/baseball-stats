@@ -208,6 +208,7 @@ def register_callbacks(app, db, llm_agent=None):
 
     @app.callback(
         Output("comparison-chart", "figure"),
+        Output("comparison-radar-chart", "figure"),
         Output("comparison-table", "children"),
         Input("compare-player-1", "value"),
         Input("compare-player-2", "value"),
@@ -215,8 +216,12 @@ def register_callbacks(app, db, llm_agent=None):
     )
     def update_comparison(player1, player2, stat_type):
         """Update player comparison view."""
+        from .components.charts import create_radar_chart
+
+        empty_radar = create_radar_chart({}, stat_type)
+
         if not player1 or not player2:
-            return {}, html.Div("Select two players to compare")
+            return {}, empty_radar, html.Div("Select two players to compare")
 
         try:
             if stat_type == "batting":
@@ -247,6 +252,48 @@ def register_callbacks(app, db, llm_agent=None):
             stats1 = df1[compare_cols].mean().round(2)
             stats2 = df2[compare_cols].mean().round(2)
 
+            # Create radar chart with career averages
+            if stat_type == "batting":
+                radar_stats = {
+                    player1: {
+                        "war": df1["war"].mean() if "war" in df1.columns else 0,
+                        "avg": df1["avg"].mean() if "avg" in df1.columns else 0,
+                        "obp": df1["obp"].mean() if "obp" in df1.columns else 0,
+                        "slg": df1["slg"].mean() if "slg" in df1.columns else 0,
+                        "hr": df1["hr"].mean() if "hr" in df1.columns else 0,
+                        "sb": df1["sb"].mean() if "sb" in df1.columns else 0,
+                    },
+                    player2: {
+                        "war": df2["war"].mean() if "war" in df2.columns else 0,
+                        "avg": df2["avg"].mean() if "avg" in df2.columns else 0,
+                        "obp": df2["obp"].mean() if "obp" in df2.columns else 0,
+                        "slg": df2["slg"].mean() if "slg" in df2.columns else 0,
+                        "hr": df2["hr"].mean() if "hr" in df2.columns else 0,
+                        "sb": df2["sb"].mean() if "sb" in df2.columns else 0,
+                    },
+                }
+            else:
+                radar_stats = {
+                    player1: {
+                        "war": df1["war"].mean() if "war" in df1.columns else 0,
+                        "era": df1["era"].mean() if "era" in df1.columns else 0,
+                        "whip": df1["whip"].mean() if "whip" in df1.columns else 0,
+                        "k_per_9": df1["k_per_9"].mean() if "k_per_9" in df1.columns else 0,
+                        "wins": df1["wins"].mean() if "wins" in df1.columns else 0,
+                        "saves": df1["saves"].mean() if "saves" in df1.columns else 0,
+                    },
+                    player2: {
+                        "war": df2["war"].mean() if "war" in df2.columns else 0,
+                        "era": df2["era"].mean() if "era" in df2.columns else 0,
+                        "whip": df2["whip"].mean() if "whip" in df2.columns else 0,
+                        "k_per_9": df2["k_per_9"].mean() if "k_per_9" in df2.columns else 0,
+                        "wins": df2["wins"].mean() if "wins" in df2.columns else 0,
+                        "saves": df2["saves"].mean() if "saves" in df2.columns else 0,
+                    },
+                }
+
+            radar_fig = create_radar_chart(radar_stats, stat_type, "Stat Profile Comparison")
+
             table_data = []
             for col in compare_cols:
                 table_data.append({
@@ -272,10 +319,10 @@ def register_callbacks(app, db, llm_agent=None):
                 className="table table-striped",
             )
 
-            return fig, table
+            return fig, radar_fig, table
         except Exception as e:
             logger.error(f"Error in comparison: {e}")
-            return {}, html.Div(f"Error: {str(e)}")
+            return {}, empty_radar, html.Div(f"Error: {str(e)}")
 
     # Player Card callbacks
     @app.callback(
@@ -481,6 +528,7 @@ def register_callbacks(app, db, llm_agent=None):
         Output("career-summary-cards", "children"),
         Output("career-comparison-table", "children"),
         Output("career-war-chart", "figure"),
+        Output("career-radar-chart", "figure"),
         Input("career-player-select", "value"),
         Input("stat-type-toggle", "value"),
     )
@@ -492,6 +540,7 @@ def register_callbacks(app, db, llm_agent=None):
             calculate_career_batting_stats,
             calculate_career_pitching_stats,
         )
+        from .components.charts import create_radar_chart
 
         empty_fig = go.Figure()
         empty_fig.update_layout(
@@ -503,9 +552,10 @@ def register_callbacks(app, db, llm_agent=None):
                 x=0.5, y=0.5, showarrow=False, font=dict(size=16)
             )]
         )
+        empty_radar = create_radar_chart({}, stat_type)
 
         if not selected_players:
-            return [], html.Div("Select players above to compare their career statistics", className="text-muted"), empty_fig
+            return [], html.Div("Select players above to compare their career statistics", className="text-muted"), empty_fig, empty_radar
 
         # Limit to 5 players
         selected_players = selected_players[:5]
@@ -522,7 +572,7 @@ def register_callbacks(app, db, llm_agent=None):
                     players_data[player] = df
 
             if not players_data:
-                return [], html.Div("No data found for selected players", className="text-warning"), empty_fig
+                return [], html.Div("No data found for selected players", className="text-warning"), empty_fig, empty_radar
 
             # Calculate career stats
             calc_func = calculate_career_batting_stats if stat_type == "batting" else calculate_career_pitching_stats
@@ -620,11 +670,14 @@ def register_callbacks(app, db, llm_agent=None):
                 height=350,
             )
 
-            return summary_cards, comparison_table, war_fig
+            # Build radar chart for career stats
+            radar_fig = create_radar_chart(career_stats, stat_type, "Career Stats Profile")
+
+            return summary_cards, comparison_table, war_fig, radar_fig
 
         except Exception as e:
             logger.error(f"Error in career comparison: {e}")
-            return [], html.Div(f"Error: {str(e)}", className="text-danger"), empty_fig
+            return [], html.Div(f"Error: {str(e)}", className="text-danger"), empty_fig, empty_radar
 
     @app.callback(
         Output("formula-preview", "children"),

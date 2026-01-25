@@ -236,6 +236,107 @@ def create_line_chart(
     return fig
 
 
+def create_radar_chart(
+    players_stats: dict[str, dict],
+    stat_type: str = "batting",
+    title: str = "Player Comparison",
+):
+    """
+    Create a radar/spider chart comparing multiple players across stats.
+
+    Args:
+        players_stats: Dict mapping player names to their stat dicts
+                      e.g., {"Player A": {"war": 5, "avg": 0.300, ...}, ...}
+        stat_type: 'batting' or 'pitching' to determine which stats to show
+        title: Chart title
+
+    Returns:
+        Plotly figure with radar chart
+    """
+    if not players_stats:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data to display",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False, font=dict(size=16)
+        )
+        return fig
+
+    # Define stats to include in radar chart (normalized to 0-100 scale)
+    if stat_type == "batting":
+        # Stats where higher is better, with typical max values for normalization
+        stats_config = {
+            "war": {"label": "WAR", "max": 10, "invert": False},
+            "avg": {"label": "AVG", "max": 0.350, "invert": False},
+            "obp": {"label": "OBP", "max": 0.450, "invert": False},
+            "slg": {"label": "SLG", "max": 0.600, "invert": False},
+            "hr": {"label": "HR", "max": 50, "invert": False},
+            "sb": {"label": "SB", "max": 50, "invert": False},
+        }
+    else:
+        # Pitching stats - some are inverted (lower is better)
+        stats_config = {
+            "war": {"label": "WAR", "max": 8, "invert": False},
+            "era": {"label": "ERA", "max": 5.0, "invert": True},  # Lower is better
+            "whip": {"label": "WHIP", "max": 1.5, "invert": True},  # Lower is better
+            "k_per_9": {"label": "K/9", "max": 12, "invert": False},
+            "wins": {"label": "W", "max": 20, "invert": False},
+            "saves": {"label": "SV", "max": 40, "invert": False},
+        }
+
+    categories = [cfg["label"] for cfg in stats_config.values()]
+    stat_keys = list(stats_config.keys())
+
+    fig = go.Figure()
+
+    colors = px.colors.qualitative.Set2
+
+    for i, (player_name, stats) in enumerate(players_stats.items()):
+        values = []
+        for key in stat_keys:
+            cfg = stats_config[key]
+            raw_value = stats.get(key, 0) or 0
+
+            # Normalize to 0-100 scale
+            if cfg["invert"]:
+                # For stats where lower is better (ERA, WHIP)
+                # A value of 0 should be 100, a value of max should be 0
+                normalized = max(0, min(100, (1 - raw_value / cfg["max"]) * 100))
+            else:
+                normalized = max(0, min(100, (raw_value / cfg["max"]) * 100))
+
+            values.append(normalized)
+
+        # Close the radar chart by repeating first value
+        values.append(values[0])
+        cats = categories + [categories[0]]
+
+        fig.add_trace(go.Scatterpolar(
+            r=values,
+            theta=cats,
+            fill='toself',
+            name=player_name,
+            line=dict(color=colors[i % len(colors)]),
+            fillcolor=colors[i % len(colors)],
+            opacity=0.6,
+        ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                ticksuffix="",
+            )
+        ),
+        showlegend=True,
+        title=title,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+    )
+
+    return fig
+
+
 def create_chart_container():
     """
     Create the main chart container component.

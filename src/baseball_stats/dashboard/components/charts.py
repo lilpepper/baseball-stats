@@ -15,6 +15,7 @@ def create_scatter_plot(
     size_col: str = None,
     hover_name: str = "name",
     title: str = "Player Statistics",
+    highlighted_player: str = None,
 ):
     """
     Create an interactive scatter plot.
@@ -27,6 +28,7 @@ def create_scatter_plot(
         size_col: Column for size encoding
         hover_name: Column for hover labels
         title: Chart title
+        highlighted_player: Name of player to highlight on the chart
 
     Returns:
         Plotly figure
@@ -50,6 +52,14 @@ def create_scatter_plot(
         )
         return fig
 
+    # If a player is highlighted, add a column for coloring
+    if highlighted_player and "name" in data.columns:
+        data = data.copy()
+        data["_highlight"] = data["name"].apply(
+            lambda x: highlighted_player if x == highlighted_player else "Other Players"
+        )
+        color_col = "_highlight"
+
     # Build scatter plot
     fig = px.scatter(
         data,
@@ -62,6 +72,10 @@ def create_scatter_plot(
         custom_data=["name"],  # Include player name for click events
         title=title,
         template="plotly_white",
+        color_discrete_map={
+            highlighted_player: "#e74c3c",  # Red for highlighted player
+            "Other Players": "#3498db",  # Blue for others
+        } if highlighted_player else None,
     )
 
     # Update layout for better appearance
@@ -70,8 +84,18 @@ def create_scatter_plot(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
-    # Add trend line
-    fig.update_traces(marker=dict(opacity=0.7, line=dict(width=1, color="DarkSlateGrey")))
+    # If player is highlighted, make their points larger and more visible
+    if highlighted_player:
+        for trace in fig.data:
+            if trace.name == highlighted_player:
+                trace.marker.size = 15
+                trace.marker.opacity = 1.0
+                trace.marker.line = dict(width=2, color="black")
+            else:
+                trace.marker.opacity = 0.4
+                trace.marker.size = 8
+    else:
+        fig.update_traces(marker=dict(opacity=0.7, line=dict(width=1, color="DarkSlateGrey")))
 
     return fig
 

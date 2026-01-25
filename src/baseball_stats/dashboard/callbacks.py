@@ -69,27 +69,45 @@ def register_callbacks(app, db, llm_agent=None):
             return []
 
     @app.callback(
+        Output("view-player-card-btn", "disabled"),
+        Input("player-search", "value"),
+    )
+    def toggle_view_card_button(selected_player):
+        """Enable/disable View Player Card button based on selection."""
+        return not bool(selected_player)
+
+    @app.callback(
+        Output("player-card-search", "value", allow_duplicate=True),
+        Output("main-tabs", "active_tab", allow_duplicate=True),
+        Input("view-player-card-btn", "n_clicks"),
+        State("player-search", "value"),
+        prevent_initial_call=True,
+    )
+    def navigate_to_player_card(n_clicks, selected_player):
+        """Navigate to Player Card tab when button is clicked."""
+        if not n_clicks or not selected_player:
+            raise PreventUpdate
+        return selected_player, "player-card"
+
+    @app.callback(
         Output("filtered-data-store", "data"),
         Input("year-range-slider", "value"),
         Input("team-filter", "value"),
         Input("min-pa-slider", "value"),
         Input("min-games-slider", "value"),
         Input("stat-type-toggle", "value"),
-        Input("player-search", "value"),
     )
-    def filter_data(year_range, teams, min_pa, min_games, stat_type, selected_player):
-        """Filter data based on all filter inputs."""
+    def filter_data(year_range, teams, min_pa, min_games, stat_type):
+        """Filter data based on all filter inputs (except player search which highlights)."""
         try:
             if stat_type == "batting":
                 df = db.get_batting_stats(
-                    player_names=[selected_player] if selected_player else None,
                     teams=teams if teams else None,
                     years=tuple(year_range) if year_range else None,
                     min_pa=min_pa or 0,
                 )
             else:
                 df = db.get_pitching_stats(
-                    player_names=[selected_player] if selected_player else None,
                     teams=teams if teams else None,
                     years=tuple(year_range) if year_range else None,
                     min_ip=min_pa or 0,  # Reuse PA slider for IP
@@ -114,8 +132,9 @@ def register_callbacks(app, db, llm_agent=None):
         Input("filtered-data-store", "data"),
         Input("x-stat-dropdown", "value"),
         Input("y-stat-dropdown", "value"),
+        Input("player-search", "value"),
     )
-    def update_main_view(filtered_data, x_stat, y_stat):
+    def update_main_view(filtered_data, x_stat, y_stat, selected_player):
         """Update main visualization based on filtered data."""
         if not filtered_data:
             empty_fig = create_scatter_plot(None, x_stat, y_stat)
@@ -125,13 +144,14 @@ def register_callbacks(app, db, llm_agent=None):
         try:
             df = pd.read_json(StringIO(filtered_data), orient="split")
 
-            # Create scatter plot
+            # Create scatter plot with highlighted player
             fig = create_scatter_plot(
                 df,
                 x_col=x_stat,
                 y_col=y_stat,
                 hover_name="name",
                 title=f"{y_stat.upper()} vs {x_stat.upper()}",
+                highlighted_player=selected_player,
             )
 
             # Create table

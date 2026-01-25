@@ -89,7 +89,15 @@ def create_player_search():
                         searchable=True,
                         clearable=True,
                         className="mb-2",
-                    )
+                    ),
+                    dbc.Button(
+                        "View Player Card",
+                        id="view-player-card-btn",
+                        color="primary",
+                        size="sm",
+                        className="w-100",
+                        disabled=True,
+                    ),
                 ]
             ),
         ],

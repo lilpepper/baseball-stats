@@ -90,7 +90,19 @@ These features reveal hidden truths that contradict conventional baseball wisdom
 
 - [ ] **Stat Contradiction Finder**: Automatically detect players whose stats defy conventional wisdom—high OBP but low runs scored (batting in wrong lineup spot?), high strikeouts but elite results (new swing philosophy?), great ERA but terrible FIP (lucky or good defense?). Surface the anomalies that suggest either hidden value or impending regression. *Counter-intuitive because we assume stats tell a coherent story, but contradictions reveal the real insights.*
 
-## Priority 12: Future Features (Wishlist)
+## Priority 12: Quick Wins (New Suggestions)
+
+Practical enhancements that build on existing functionality:
+
+- [ ] **Season-over-Season Sparklines**: Add mini trend charts to the Player Card showing how each stat changed year-to-year. Green arrows for improvement, red for decline. Instantly see if a player is trending up or down without reading tables. *Builds on existing Player Card infrastructure.*
+
+- [ ] **"Prime Years" Highlighter**: Automatically detect and highlight a player's peak performance window (typically ages 26-32). Show the stats from their prime vs. career average. Help users understand "peak Bonds" vs. "career Bonds". *Uses existing data, adds analytical insight.*
+
+- [ ] **Head-to-Head Comparison Mode**: Enhanced Compare tab with side-by-side stat table showing who "wins" each category (highlighted in green). Add cumulative score like "Player A wins 7/10 categories". Makes comparisons more engaging and decisive. *Enhances existing Compare functionality.*
+
+- [ ] **Era-Filtered Leaderboards**: Add decade filter to Explorer tab (1950s, 1960s, etc.) to see who dominated each era. "Top 10 HR hitters of the 1990s". Useful for historical context and settling debates. *Simple filter addition to existing leaderboard.*
+
+## Priority 13: Future Features (Wishlist)
 - [x] **Player similarity search**: "Find players similar to Mike Trout" ✅ Added to Player Card
 - [ ] **Projection system**: Simple projection model for future performance
 - [ ] **Trade analyzer**: Compare packages of players

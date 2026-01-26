@@ -28,7 +28,7 @@ def create_scatter_plot(
         size_col: Column for size encoding
         hover_name: Column for hover labels
         title: Chart title
-        highlighted_players: List of player names to highlight on the chart
+        highlighted_players: List of player IDfg values to highlight on the chart
 
     Returns:
         Plotly figure
@@ -65,7 +65,28 @@ def create_scatter_plot(
     ]
 
     # If players are highlighted, add a column for coloring
-    if highlighted_players and "name" in data.columns:
+    # Use IDfg for matching (handles duplicate names), fall back to name
+    if highlighted_players and "IDfg" in data.columns:
+        data = data.copy()
+        # Convert IDfg to string for comparison
+        highlighted_ids = [str(p) for p in highlighted_players]
+
+        def get_highlight_group(row):
+            if str(row["IDfg"]) in highlighted_ids:
+                return row["name"]  # Use player name for legend display
+            return "Other Players"
+
+        data["_highlight"] = data.apply(get_highlight_group, axis=1)
+        color_col = "_highlight"
+
+        # Build color map - map player names to colors
+        color_map = {"Other Players": "#d0d0d0"}  # Light gray for others
+        # Get unique highlighted player names for color assignment
+        highlighted_names = data[data["_highlight"] != "Other Players"]["_highlight"].unique()
+        for i, player_name in enumerate(highlighted_names):
+            color_map[player_name] = highlight_colors[i % len(highlight_colors)]
+    elif highlighted_players and "name" in data.columns:
+        # Fallback to name-based matching if no IDfg
         data = data.copy()
 
         def get_highlight_group(name):
@@ -76,8 +97,7 @@ def create_scatter_plot(
         data["_highlight"] = data["name"].apply(get_highlight_group)
         color_col = "_highlight"
 
-        # Build color map - very faded gray for non-highlighted
-        color_map = {"Other Players": "#d0d0d0"}  # Light gray for others
+        color_map = {"Other Players": "#d0d0d0"}
         for i, player in enumerate(highlighted_players):
             color_map[player] = highlight_colors[i % len(highlight_colors)]
     else:
@@ -105,9 +125,11 @@ def create_scatter_plot(
     )
 
     # If players are highlighted, make their points much larger and more visible
-    if highlighted_players:
+    if highlighted_players and color_map:
         for trace in fig.data:
-            if trace.name in highlighted_players:
+            # Trace names are player names (from _highlight column), not IDfg
+            # Check if trace is a highlighted player (not "Other Players")
+            if trace.name != "Other Players" and trace.name in color_map:
                 trace.marker.size = 22  # Much bigger
                 trace.marker.opacity = 1.0
                 trace.marker.line = dict(width=3, color="black")  # Thicker outline

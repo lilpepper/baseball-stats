@@ -29,7 +29,7 @@ def create_year_range_slider(min_year: int = 1900, max_year: int = 2024):
                         id="year-range-slider",
                         min=min_year,
                         max=max_year,
-                        value=[2015, max_year],
+                        value=[1950, max_year],  # Default to 1950-present
                         marks=marks,
                         tooltip={"placement": "bottom", "always_visible": True},
                         allowCross=False,

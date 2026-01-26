@@ -54,12 +54,12 @@ def create_scatter_plot(
 
     # Bright, saturated colors for highlighted players (high contrast)
     highlight_colors = [
-        "#FF0000",  # Bright Red
-        "#00FF00",  # Bright Green
+        "#00FFCC",  # Fluorescent Teal (primary)
         "#FF00FF",  # Magenta
         "#FFD700",  # Gold
-        "#00FFFF",  # Cyan
         "#FF6B00",  # Bright Orange
+        "#FF0000",  # Bright Red
+        "#00FF00",  # Bright Green
         "#0080FF",  # Bright Blue
         "#FF1493",  # Deep Pink
     ]
